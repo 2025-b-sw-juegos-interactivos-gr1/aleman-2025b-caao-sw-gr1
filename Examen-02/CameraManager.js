@@ -1,6 +1,6 @@
 /**
  * CameraManager - Maneja la cámara que sigue a la moto
- * GAME FEEL: Camera shake y lag de rotación para sensación de velocidad
+ * GAME FEEL: Camera shake para sensación de velocidad
  */
 class CameraManager {
     constructor() {
@@ -13,11 +13,6 @@ class CameraManager {
         this.shakeIntensity = 0;
         this.shakeOffset = { x: 0, y: 0, z: 0 };
         this.shakeTime = 0;
-        
-        // Lag de rotación para inercia en curvas
-        this.targetRotationOffset = 0;
-        this.currentRotationOffset = 0;
-        this.rotationLagFactor = 0.08; // Qué tan rápido la cámara sigue al jugador
     }
 
     initialize(scene) {
@@ -73,42 +68,25 @@ class CameraManager {
         const heightOffset = 5 + velocidadNorm * 1.5; // Sube ligeramente a alta velocidad
         this.camera.heightOffset = BABYLON.Scalar.Lerp(this.camera.heightOffset, heightOffset, 0.03);
         
-        // GAME FEEL: Camera Shake cuando velocidad > 0.8
+        // GAME FEEL: Camera Shake cuando velocidad > 0.8 (sutil)
         if (velocidadNorm > 0.8) {
-            this.shakeIntensity = (velocidadNorm - 0.8) * 5; // Intensidad proporcional
-            this.shakeTime += deltaTime * 20; // Velocidad del shake
+            this.shakeIntensity = (velocidadNorm - 0.8) * 3; // Reducido de 5 a 3
+            this.shakeTime += deltaTime * 20;
             
-            // Shake procedural usando Perlin-like noise simulado con senos
-            this.shakeOffset.x = Math.sin(this.shakeTime * 2.1) * this.shakeIntensity * 0.15;
-            this.shakeOffset.y = Math.sin(this.shakeTime * 1.7) * this.shakeIntensity * 0.1;
-            this.shakeOffset.z = Math.sin(this.shakeTime * 2.3) * this.shakeIntensity * 0.15;
+            // Shake procedural sutil usando senos
+            this.shakeOffset.x = Math.sin(this.shakeTime * 2.1) * this.shakeIntensity * 0.08;
+            this.shakeOffset.y = Math.sin(this.shakeTime * 1.7) * this.shakeIntensity * 0.05;
+            this.shakeOffset.z = Math.sin(this.shakeTime * 2.3) * this.shakeIntensity * 0.08;
             
-            // Aplicar shake a la posición de la cámara
+            // Aplicar shake a la posición de la cámara de forma muy sutil
             if (this.camera.position) {
-                this.camera.position.x += this.shakeOffset.x * deltaTime;
-                this.camera.position.y += this.shakeOffset.y * deltaTime;
-                this.camera.position.z += this.shakeOffset.z * deltaTime;
+                this.camera.position.x += this.shakeOffset.x * deltaTime * 0.5;
+                this.camera.position.y += this.shakeOffset.y * deltaTime * 0.5;
+                this.camera.position.z += this.shakeOffset.z * deltaTime * 0.5;
             }
         } else {
             // Reducir shake gradualmente cuando baja la velocidad
             this.shakeIntensity = BABYLON.Scalar.Lerp(this.shakeIntensity, 0, 0.1);
-        }
-        
-        // GAME FEEL: Lag en rotación para acentuar inercia en curvas
-        // La cámara sigue al jugador con retraso, creando sensación de peso
-        if (this.gameManager.jugador) {
-            const jugadorRotY = this.gameManager.jugador.rotation.y;
-            
-            // Calcular diferencia angular (manejar wrap-around)
-            let diff = jugadorRotY - this.currentRotationOffset;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            
-            // Suavizar la rotación con lerp (lag)
-            this.currentRotationOffset += diff * this.rotationLagFactor;
-            
-            // Aplicar el offset de rotación a la cámara
-            this.camera.rotationOffset = 180 + (this.currentRotationOffset * (180 / Math.PI));
         }
     }
     

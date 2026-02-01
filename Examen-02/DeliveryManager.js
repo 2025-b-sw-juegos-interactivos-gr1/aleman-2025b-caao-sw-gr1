@@ -103,11 +103,10 @@ class DeliveryManager {
             entregasCompletadas: this.gameManager.entregasCompletadas
         });
 
-        setTimeout(() => {
-            this.seleccionarNuevoRestaurante();
-            this.gameManager.destinoActual = null;
-            this.gameManager.particleManager.actualizarBolsaRestaurante();
-        }, 2000);
+        // Actualización inmediata del objetivo para mejor feedback
+        this.gameManager.destinoActual = null;
+        this.seleccionarNuevoRestaurante();
+        this.gameManager.particleManager.actualizarBolsaRestaurante();
     }
 
     seleccionarNuevoRestaurante() {

@@ -92,10 +92,10 @@ class GameManager {
     }
 
     getManiobrabilidad() {
-        // Disminuye con la velocidad para mayor dificultad
-        // A velocidad máxima, la maniobrabilidad cae al 30% (giros muy amplios)
+        // Disminuye con la velocidad para mayor dificultad pero manteniendo jugabilidad
+        // A velocidad máxima, la maniobrabilidad cae al 60% (antes 30%, ahora más manejable)
         const velocidadNorm = this.getVelocidadNormalizada();
-        return this.MANIOBRABILIDAD_BASE * (1 - velocidadNorm * 0.7);
+        return this.MANIOBRABILIDAD_BASE * (1 - velocidadNorm * 0.4);
     }
 
     /**
@@ -168,31 +168,56 @@ class GameManager {
         if (!this.jugador || !this.flechaGuia) return;
 
         let objetivo = null;
+        let distanciaAlObjetivo = 0;
 
         if (!this.paqueteEnMano && this.restauranteActual) {
             objetivo = this.restauranteActual.posicion;
-            this.flechaGuia.getChildren().forEach(child => {
-                if (child.material) {
-                    child.material.diffuseColor = new BABYLON.Color3(0, 1, 0);
-                    child.material.emissiveColor = new BABYLON.Color3(0, 0.5, 0);
-                }
-            });
         } else if (this.paqueteEnMano && this.destinoActual) {
             objetivo = this.destinoActual.posicion;
-            this.flechaGuia.getChildren().forEach(child => {
-                if (child.material) {
-                    child.material.diffuseColor = new BABYLON.Color3(1, 0.8, 0);
-                    child.material.emissiveColor = new BABYLON.Color3(0.5, 0.4, 0);
-                }
-            });
         }
 
         if (objetivo) {
-            this.flechaGuia.position.x = this.jugador.position.x;
-            this.flechaGuia.position.z = this.jugador.position.z;
+            // Calcular distancia
+            distanciaAlObjetivo = BABYLON.Vector3.Distance(this.jugador.position, objetivo);
+            
+            // UX: Color dinámico según distancia (Verde -> Amarillo -> Rojo)
+            let colorR, colorG, colorB;
+            if (distanciaAlObjetivo > 50) {
+                // Lejos: Verde
+                colorR = 0; colorG = 1; colorB = 0;
+            } else if (distanciaAlObjetivo > 20) {
+                // Media: Verde a Amarillo
+                const t = (distanciaAlObjetivo - 20) / 30;
+                colorR = 1 - t; colorG = 1; colorB = 0;
+            } else {
+                // Cerca: Amarillo a Rojo con parpadeo
+                const t = distanciaAlObjetivo / 20;
+                colorR = 1; colorG = t; colorB = 0;
+                
+                // Parpadeo cuando está muy cerca (< 10 unidades)
+                if (distanciaAlObjetivo < 10) {
+                    const pulso = Math.sin(Date.now() / 100) * 0.5 + 0.5;
+                    colorR *= pulso;
+                    colorG *= pulso;
+                }
+            }
+            
+            this.flechaGuia.getChildren().forEach(child => {
+                if (child.material) {
+                    child.material.diffuseColor = new BABYLON.Color3(colorR, colorG, colorB);
+                    child.material.emissiveColor = new BABYLON.Color3(colorR * 0.5, colorG * 0.5, colorB * 0.5);
+                }
+            });
+            
+            // UX: Clamping - Mantener flecha visible cerca del jugador
+            const direccion = objetivo.subtract(this.jugador.position);
+            const distanciaFlecha = Math.min(distanciaAlObjetivo * 0.3, 15); // Máximo 15 unidades
+            const direccionNormalizada = direccion.normalize();
+            
+            this.flechaGuia.position.x = this.jugador.position.x + direccionNormalizada.x * 3;
+            this.flechaGuia.position.z = this.jugador.position.z + direccionNormalizada.z * 3;
             this.flechaGuia.position.y = 2.5;
 
-            const direccion = objetivo.subtract(this.jugador.position);
             const angulo = Math.atan2(direccion.x, direccion.z);
             this.flechaGuia.rotation.y = angulo;
 

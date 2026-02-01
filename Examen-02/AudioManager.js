@@ -101,4 +101,38 @@ class AudioManager {
             this.isInitialized = false;
         }
     }
+    
+    /**
+     * EVENTO: Respuesta de audio a colisiones
+     */
+    onCollision(impactForce) {
+        if (!this.isInitialized || !this.engineSound) return;
+        
+        try {
+            const audioContext = this.engineSound.audioContext;
+            if (!audioContext) return;
+            
+            // Crear un burst de ruido blanco para simular impacto
+            const bufferSize = audioContext.sampleRate * 0.1; // 100ms
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            // Generar ruido con decay
+            for (let i = 0; i < bufferSize; i++) {
+                const decay = 1 - (i / bufferSize);
+                data[i] = (Math.random() * 2 - 1) * impactForce * 0.3 * decay;
+            }
+            
+            // Reproducir el impacto
+            const source = audioContext.createBufferSource();
+            const impactGain = audioContext.createGain();
+            source.buffer = buffer;
+            source.connect(impactGain);
+            impactGain.connect(audioContext.destination);
+            impactGain.gain.setValueAtTime(Math.min(impactForce * 0.5, 0.3), audioContext.currentTime);
+            source.start();
+        } catch (error) {
+            console.warn("Error en audio de colisión:", error);
+        }
+    }
 }

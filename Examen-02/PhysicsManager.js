@@ -43,17 +43,17 @@ class PhysicsManager {
         }
 
         // Giro con maniobrabilidad que disminuye con velocidad (Riesgo vs Recompensa)
-        // VERTICAL SLICE: A mayor velocidad, menor maniobrabilidad = giros más amplios y difíciles
+        // VERTICAL SLICE: A mayor velocidad, menor maniobrabilidad = giros más amplios
+        // AJUSTADO: Balance entre desafío y diversión
         const maniobrabilidad = gm.getManiobrabilidad();
         const velocidadAbs = Math.abs(gm.velocidadActual);
         const velocidadNorm = gm.getVelocidadNormalizada();
         
-        // Factor de giro que disminuye dramáticamente a alta velocidad
-        // A velocidad máxima, la maniobrabilidad es mínima (30% de la base)
+        // Factor de giro que disminuye con velocidad pero mantiene control
         const factorGiro = (velocidadAbs / gm.VELOCIDAD_MAX) * maniobrabilidad;
         
-        // Añadir un factor de respuesta que hace los giros menos responsivos a alta velocidad
-        const responsividad = 1 - velocidadNorm * 0.5; // 50% menos responsivo a velocidad máxima
+        // Responsividad: reducción más suave (30% a velocidad máxima, antes 50%)
+        const responsividad = 1 - velocidadNorm * 0.4;
 
         if (gm.inputMap["a"] && velocidadAbs > 0.01) {
             const giro = gm.VELOCIDAD_GIRO * factorGiro * responsividad * Math.sign(gm.velocidadActual);
