@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uber Eats Delivery - Examen Babylon.js</title>
+    <style>
+        /* ========================================
+           SECCIÓN 1: ESTILOS CSS
+           ======================================== */
+        html, body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* Panel de instrucciones */
+        #instrucciones {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            max-width: 280px;
+            border: 2px solid #06C167;
+        }
+
+        #instrucciones h3 {
+            margin: 0 0 10px 0;
+            color: #06C167;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #instrucciones ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        #instrucciones li {
+            margin: 5px 0;
+        }
+
+        .tecla {
+            background: #06C167;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        /* Panel de estado del juego */
+        #estadoJuego {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            min-width: 220px;
+            border: 2px solid #06C167;
+        }
+
+        #estadoJuego h3 {
+            margin: 0 0 10px 0;
+            color: #06C167;
+        }
+
+        .estado-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+
+        .estado-valor {
+            font-weight: bold;
+        }
+
+        .tiene-pedido {
+            color: #FFD700;
+        }
+
+        .sin-pedido {
+            color: #FF6B6B;
+        }
+
+        .entregado {
+            color: #06C167;
+        }
+
+        /* Mensaje central */
+        #mensajeCentral {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(6, 193, 103, 0.95);
+            color: white;
+            padding: 30px 50px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            animation: aparecer 0.5s ease;
+        }
+
+        @keyframes aparecer {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* Velocímetro */
+        #velocimetro {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50%;
+            font-size: 18px;
+            border: 3px solid #06C167;
+            text-align: center;
+            min-width: 60px;
+        }
+
+        #velocimetro span {
+            font-size: 24px;
+            font-weight: bold;
+            color: #06C167;
+        }
+
+        /* Pantalla de carga */
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #loadingScreen h1 {
+            color: #06C167;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        #loadingBar {
+            width: 300px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #loadingProgress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #06C167, #00ff88);
+            transition: width 0.3s;
+        }
+
+        #loadingText {
+            color: white;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+    </style>
+    
+    <!-- Librerías de Babylon.js -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+
+    <!-- Managers del juego -->
+    <script src="GameManager.js"></script>
+    <script src="DeliveryManager.js"></script>
+    <script src="UIManager.js"></script>
+    <script src="CameraManager.js"></script>
+    <script src="PhysicsManager.js"></script>
+    <script src="ParticleManager.js"></script>
+    <script src="AudioManager.js"></script>
+</head>
+<body>
+    <!-- Pantalla de carga -->
+    <div id="loadingScreen">
+        <h1>🛵 Uber Eats Delivery</h1>
+        <div id="loadingBar">
+            <div id="loadingProgress"></div>
+        </div>
+        <p id="loadingText">Cargando texturas...</p>
+    </div>
+
+    <!-- Canvas donde se renderiza el juego 3D -->
+    <canvas id="renderCanvas"></canvas>
+
+    <!-- Panel de instrucciones -->
+    <div id="instrucciones">
+        <h3><span class="logo">🛵 Uber Eats</span> Delivery</h3>
+        <ul>
+            <li><span class="tecla">W</span> - Acelerar</li>
+            <li><span class="tecla">S</span> - Frenar / Reversa</li>
+            <li><span class="tecla">A</span> <span class="tecla">D</span> - Girar</li>
+            <li><span class="tecla">ESPACIO</span> - Recoger / Entregar</li>
+        </ul>
+        <p style="margin-top: 10px; font-size: 12px; color: #aaa;">
+            🏪 Sigue la flecha VERDE → Restaurante<br>
+            🏠 Sigue la flecha AMARILLA → Casa destino
+        </p>
+    </div>
+
+    <!-- Panel de estado -->
+    <div id="estadoJuego">
+        <h3>📊 Estado del Pedido</h3>
+        <div class="estado-item">
+            <span>Pedido:</span>
+            <span id="estadoPedido" class="estado-valor sin-pedido">Sin recoger</span>
+        </div>
+        <div class="estado-item">
+            <span>Destino:</span>
+            <span id="destinoActual" class="estado-valor">---</span>
+        </div>
+        <div class="estado-item">
+            <span>Distancia:</span>
+            <span id="distanciaDestino" class="estado-valor">---</span>
+        </div>
+        <div class="estado-item">
+            <span>Entregas:</span>
+            <span id="contadorEntregas" class="estado-valor">0</span>
+        </div>
+    </div>
+
+    <!-- Velocímetro -->
+    <div id="velocimetro">
+        <span id="velocidadActual">0</span><br>
+        <small>km/h</small>
+    </div>
+
+    <!-- Mensaje central para notificaciones -->
+    <div id="mensajeCentral"></div>
+
+    <script>
+        /* ========================================
+           SECCIÓN 3: CONFIGURACIÓN INICIAL
+           ======================================== */
+
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+        const gameManager = GameManager.getInstance();
+
+        /* ========================================
+           SECCIÓN 4: FUNCIÓN PRINCIPAL - CREAR ESCENA
+           ======================================== */
+        const createScene = async function() {
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color3(0.5, 0.7, 0.95);
+            scene.collisionsEnabled = true;  // Habilitar colisiones
+
+            // Inicializar GameManager
+            gameManager.initialize(engine, scene);
+
+            gameManager.uiManager.actualizarCarga(10, "Configurando escena...");
+
+            /* ========================================
+               SECCIÓN 4.1: CREAR JUGADOR PRIMERO
+               ======================================== */
+            
+            gameManager.jugador = new BABYLON.TransformNode("jugador", scene);
+            gameManager.jugador.position = new BABYLON.Vector3(0, 0, 0);
+
+            // Inicializar GameManager después de crear el jugador
+            gameManager.initialize(engine, scene);
+
+            /* ========================================
+               SECCIÓN 4.2: CÁMARA Y LUCES
+               ======================================== */
+
+            // Inicializar la cámara INMEDIATAMENTE después del jugador
+            const camera = gameManager.cameraManager.initialize(scene);
+            if (!camera) {
+                console.error("FATAL: No se pudo crear la cámara");
+                throw new Error("Cámara no creada");
+            }
+            scene.activeCamera = camera;
+            console.log("✅ Cámara asignada como activa:", scene.activeCamera);
+
+            const luzAmbiente = new BABYLON.HemisphericLight(
+                "luzAmbiente", 
+                new BABYLON.Vector3(0, 1, 0), 
+                scene
+            );
+            luzAmbiente.intensity = 0.8;
+
+            const luzSol = new BABYLON.DirectionalLight(
+                "luzSol", 
+                new BABYLON.Vector3(-1, -2, -1), 
+                scene
+            );
+            luzSol.intensity = 0.6;
+
+            gameManager.uiManager.actualizarCarga(20, "Cargando texturas...");
+
+            /* ========================================
+               SECCIÓN 4.2: CARGAR TEXTURAS
+               ======================================== */
+            
+            // Textura de asfalto para el suelo
+            const texAsfalto = new BABYLON.Texture(gameManager.RUTA_TEXTURAS + "asfalto.jpg", scene);
+            texAsfalto.uScale = 20;
+            texAsfalto.vScale = 20;
+            
+            const matSuelo = new BABYLON.StandardMaterial("matSuelo", scene);
+            matSuelo.diffuseTexture = texAsfalto;
+
+            // Textura de césped
+            const texCesped = new BABYLON.Texture(gameManager.RUTA_TEXTURAS + "cesped.jpg", scene);
+            texCesped.uScale = 5;
+            texCesped.vScale = 5;
+            
+            const matCesped = new BABYLON.StandardMaterial("matCesped", scene);
+            matCesped.diffuseTexture = texCesped;
+
+            // Textura de ladrillo rojo (restaurantes)
+            const texLadrilloRojo = new BABYLON.Texture(gameManager.RUTA_TEXTURAS + "ladrillo_rojo.jpg", scene);
+            texLadrilloRojo.uScale = 2;
+            texLadrilloRojo.vScale = 2;
+            
+            const matLadrilloRojo = new BABYLON.StandardMaterial("matLadrilloRojo", scene);
+            matLadrilloRojo.diffuseTexture = texLadrilloRojo;
+
+            // Textura de ladrillo beige (edificios)
+            const texLadrilloBeige = new BABYLON.Texture(gameManager.RUTA_TEXTURAS + "ladrillo_beige.jpg", scene);
+            texLadrilloBeige.uScale = 2;
+            texLadrilloBeige.vScale = 2;
+            
+            const matLadrilloBeige = new BABYLON.StandardMaterial("matLadrilloBeige", scene);
+            matLadrilloBeige.diffuseTexture = texLadrilloBeige;
+
+            // Textura de concreto (edificios modernos)
+            const texConcreto = new BABYLON.Texture(gameManager.RUTA_TEXTURAS + "concreto.jpg", scene);
+            texConcreto.uScale = 3;
+            texConcreto.vScale = 3;
+            
+            const matConcreto = new BABYLON.StandardMaterial("matConcreto", scene);
+            matConcreto.diffuseTexture = texConcreto;
+
+            // Textura de tejas (techos)
+            const texTejas = new BABYLON.Texture(gameManager.RUTA_TEXTURAS + "tejas.jpg", scene);
+            texTejas.uScale = 3;
+            texTejas.vScale = 3;
+            
+            const matTejas = new BABYLON.StandardMaterial("matTejas", scene);
+            matTejas.diffuseTexture = texTejas;
+
+            // Textura de madera
+            const texMadera = new BABYLON.Texture(gameManager.RUTA_TEXTURAS + "madera.jpg", scene);
+            const matMadera = new BABYLON.StandardMaterial("matMadera", scene);
+            matMadera.diffuseTexture = texMadera;
+
+            // Texturas de paredes de casas
+            const texParedAzul = new BABYLON.Texture(gameManager.RUTA_TEXTURAS + "pared_azul.jpg", scene);
+            texParedAzul.uScale = 2;
+            texParedAzul.vScale = 2;
+            const matParedAzul = new BABYLON.StandardMaterial("matParedAzul", scene);
+            matParedAzul.diffuseTexture = texParedAzul;
+
+            const texParedAmarilla = new BABYLON.Texture(gameManager.RUTA_TEXTURAS + "pared_amarilla.jpg", scene);
+            texParedAmarilla.uScale = 2;
+            texParedAmarilla.vScale = 2;
+            const matParedAmarilla = new BABYLON.StandardMaterial("matParedAmarilla", scene);
+            matParedAmarilla.diffuseTexture = texParedAmarilla;
+
+            gameManager.uiManager.actualizarCarga(40, "Creando escenario...");
+
+            // Materiales para zonas
+            const matZonaRecogida = new BABYLON.StandardMaterial("matZonaRecogida", scene);
+            matZonaRecogida.diffuseColor = new BABYLON.Color3(0, 1, 0);
+            matZonaRecogida.alpha = 0.5;
+            matZonaRecogida.emissiveColor = new BABYLON.Color3(0, 0.3, 0);
+
+            const matZonaEntrega = new BABYLON.StandardMaterial("matZonaEntrega", scene);
+            matZonaEntrega.diffuseColor = new BABYLON.Color3(1, 0.8, 0);
+            matZonaEntrega.alpha = 0.5;
+            matZonaEntrega.emissiveColor = new BABYLON.Color3(0.3, 0.2, 0);
+
+            const matPaquete = new BABYLON.StandardMaterial("matPaquete", scene);
+            matPaquete.diffuseTexture = texMadera;
+
+            /* ========================================
+               SECCIÓN 4.3: CREAR EL ESCENARIO CON TEXTURAS
+               ======================================== */
+            
+            // --- Suelo principal con textura de asfalto ---
+            const suelo = BABYLON.MeshBuilder.CreateGround("suelo", { 
+                width: gameManager.MAPA_TAMAÑO, 
+                height: gameManager.MAPA_TAMAÑO 
+            }, scene);
+            suelo.material = matSuelo;
+            suelo.checkCollisions = true;
+
+            // --- Crear calles con líneas ---
+            const crearCalles = () => {
+                const matLinea = new BABYLON.StandardMaterial("matLinea", scene);
+                matLinea.diffuseColor = new BABYLON.Color3(1, 1, 0);
+                matLinea.emissiveColor = new BABYLON.Color3(0.3, 0.3, 0);
+
+                for (let z = -50; z <= 50; z += 25) {
+                    for (let x = -55; x <= 55; x += 6) {
+                        const linea = BABYLON.MeshBuilder.CreateBox("linea", {
+                            width: 3, height: 0.02, depth: 0.3
+                        }, scene);
+                        linea.position = new BABYLON.Vector3(x, 0.01, z);
+                        linea.material = matLinea;
+                    }
+                }
+
+                for (let x = -50; x <= 50; x += 25) {
+                    for (let z = -55; z <= 55; z += 6) {
+                        const linea = BABYLON.MeshBuilder.CreateBox("linea", {
+                            width: 0.3, height: 0.02, depth: 3
+                        }, scene);
+                        linea.position = new BABYLON.Vector3(x, 0.01, z);
+                        linea.material = matLinea;
+                    }
+                }
+            };
+            crearCalles();
+
+            // --- Crear áreas de césped con textura ---
+            const crearBloqueCesped = (x, z, ancho, largo) => {
+                const cesped = BABYLON.MeshBuilder.CreateGround("cesped", {
+                    width: ancho, height: largo
+                }, scene);
+                cesped.position = new BABYLON.Vector3(x, 0.02, z);
+                cesped.material = matCesped;
+                return cesped;
+            };
+
+            const bloquesPos = [
+                [-37, -37], [-37, -12], [-37, 12], [-37, 37],
+                [-12, -37], [-12, -12], [-12, 12], [-12, 37],
+                [12, -37], [12, -12], [12, 12], [12, 37],
+                [37, -37], [37, -12], [37, 12], [37, 37]
+            ];
+            bloquesPos.forEach(pos => crearBloqueCesped(pos[0], pos[1], 20, 20));
+
+            gameManager.uiManager.actualizarCarga(50, "Creando edificios...");
+
+            /* ========================================
+               SECCIÓN 4.4: FUNCIÓN CREAR EDIFICIO CON COLISIÓN
+               ======================================== */
+            
+            const crearEdificio = (nombre, x, z, ancho, alto, profundo, material) => {
+                const edificio = BABYLON.MeshBuilder.CreateBox(nombre, {
+                    width: ancho,
+                    height: alto,
+                    depth: profundo
+                }, scene);
+                edificio.position = new BABYLON.Vector3(x, alto / 2, z);
+                edificio.material = material;
+                edificio.checkCollisions = true;
+                
+                // Guardar datos para colisión manual
+                gameManager.edificiosColision.push({
+                    mesh: edificio,
+                    x: x,
+                    z: z,
+                    ancho: ancho,
+                    profundo: profundo,
+                    radioColision: Math.max(ancho, profundo) / 2 + 1.5
+                });
+                
+                return edificio;
+            };
+
+            /* ========================================
+               SECCIÓN 4.5: CREAR RESTAURANTES CON TEXTURAS
+               ======================================== */
+            
+            const datosRestaurantes = [
+                { nombre: "🍕 Pizza Palace", x: -40, z: 40 },
+                { nombre: "🍔 Burger King", x: 40, z: 40 },
+                { nombre: "🍣 Sushi House", x: -40, z: -10 },
+                { nombre: "🌮 Taco Loco", x: 40, z: -10 }
+            ];
+
+            datosRestaurantes.forEach((data, index) => {
+                const edificio = crearEdificio("rest_" + index, data.x, data.z, 8, 5, 6, matLadrilloRojo);
+                
+                // Techo con textura de tejas
+                const techo = BABYLON.MeshBuilder.CreateBox("techoRest" + index, {
+                    width: 9, height: 0.5, depth: 7
+                }, scene);
+                techo.position = new BABYLON.Vector3(data.x, 5.25, data.z);
+                techo.material = matTejas;
+
+                // Zona de recogida
+                const zona = BABYLON.MeshBuilder.CreateCylinder("zonaRest" + index, {
+                    diameter: 5, height: 0.1
+                }, scene);
+                zona.position = new BABYLON.Vector3(data.x, 0.05, data.z - 6);
+                zona.material = matZonaRecogida;
+
+                // Marcador flotante
+                const marcador = BABYLON.MeshBuilder.CreateCylinder("marcadorRest" + index, {
+                    diameterTop: 0, diameterBottom: 2, height: 3
+                }, scene);
+                marcador.position = new BABYLON.Vector3(data.x, 4, data.z - 6);
+                marcador.material = matZonaRecogida;
+
+                gameManager.restaurantes.push({
+                    nombre: data.nombre,
+                    edificio: edificio,
+                    zona: zona,
+                    posicion: new BABYLON.Vector3(data.x, 0, data.z - 6),
+                    marcador: marcador
+                });
+            });
+
+            gameManager.uiManager.actualizarCarga(60, "Creando casas...");
+
+            /* ========================================
+               SECCIÓN 4.6: CREAR CASAS CON TEXTURAS
+               ======================================== */
+            
+            const datosCasas = [
+                { nombre: "🏠 Casa Roja", x: -35, z: -40, mat: matLadrilloRojo },
+                { nombre: "🏠 Casa Azul", x: -10, z: -40, mat: matParedAzul },
+                { nombre: "🏠 Casa Verde", x: 15, z: -40, mat: matLadrilloBeige },
+                { nombre: "🏠 Casa Amarilla", x: 40, z: -40, mat: matParedAmarilla },
+                { nombre: "🏢 Apartamento 1", x: -45, z: 10, mat: matConcreto },
+                { nombre: "🏢 Apartamento 2", x: 45, z: 10, mat: matConcreto }
+            ];
+
+            datosCasas.forEach((data, index) => {
+                const edificio = crearEdificio("casa_" + index, data.x, data.z, 6, 4, 5, data.mat);
+                
+                // Techo piramidal con textura
+                const techoCasa = BABYLON.MeshBuilder.CreateCylinder("techoCasa" + index, {
+                    diameterTop: 0, diameterBottom: 8, height: 2.5, tessellation: 4
+                }, scene);
+                techoCasa.position = new BABYLON.Vector3(data.x, 5.2, data.z);
+                techoCasa.rotation.y = Math.PI / 4;
+                techoCasa.material = matTejas;
+
+                // Zona de entrega
+                const zona = BABYLON.MeshBuilder.CreateCylinder("zonaCasa" + index, {
+                    diameter: 5, height: 0.1
+                }, scene);
+                zona.position = new BABYLON.Vector3(data.x, 0.05, data.z + 5);
+                zona.material = matZonaEntrega;
+
+                // Marcador flotante
+                const marcador = BABYLON.MeshBuilder.CreateCylinder("marcadorCasa" + index, {
+                    diameterTop: 0, diameterBottom: 2, height: 3
+                }, scene);
+                marcador.position = new BABYLON.Vector3(data.x, 4, data.z + 5);
+                marcador.material = matZonaEntrega;
+                marcador.isVisible = false;
+
+                gameManager.casas.push({
+                    nombre: data.nombre,
+                    edificio: edificio,
+                    zona: zona,
+                    posicion: new BABYLON.Vector3(data.x, 0, data.z + 5),
+                    marcador: marcador
+                });
+            });
+
+            // --- Edificios decorativos con texturas variadas ---
+            // Posiciones ajustadas para evitar overlapping con restaurantes, casas y calles
+            const materialesEdificios = [matLadrilloRojo, matLadrilloBeige, matConcreto];
+            const edificiosDecor = [
+                { x: -12, z: -20, w: 5, h: 8, d: 5 },   // Movido para evitar conflicto
+                { x: 12, z: -20, w: 5, h: 10, d: 5 },   // Movido para evitar conflicto
+                { x: -12, z: 20, w: 5, h: 6, d: 5 },    // Reducido y movido
+                { x: 12, z: 20, w: 5, h: 12, d: 5 },    // Reducido y movido
+                { x: -37, z: 20, w: 5, h: 7, d: 5 },    // Movido lejos de apartamentos
+                { x: 37, z: -20, w: 5, h: 9, d: 5 },    // Movido lejos de apartamentos
+                { x: 0, z: 45, w: 6, h: 5, d: 6 },      // Movido más al norte
+                { x: 0, z: 20, w: 5, h: 6, d: 5 }       // Movido para evitar conflicto
+            ];
+
+            edificiosDecor.forEach((e, i) => {
+                const mat = materialesEdificios[i % materialesEdificios.length];
+                crearEdificio("decorativo" + i, e.x, e.z, e.w, e.h, e.d, mat);
+            });
+
+            gameManager.uiManager.actualizarCarga(70, "Cargando modelo de moto...");
+
+            /* ========================================
+               SECCIÓN 4.7: CARGAR MODELO DE MOTO
+               ======================================== */
+            
+            try {
+                const resultado = await BABYLON.SceneLoader.ImportMeshAsync(
+                    "", 
+                    gameManager.RUTA_MODELOS, 
+                    "moto.glb", 
+                    scene
+                );
+                
+                gameManager.modeloMoto = resultado.meshes[0];
+                gameManager.modeloMoto.parent = gameManager.jugador;
+                gameManager.modeloMoto.position = new BABYLON.Vector3(0, 0, 0);
+                gameManager.modeloMoto.scaling = new BABYLON.Vector3(1, 1, 1);
+                gameManager.modeloMoto.rotation = new BABYLON.Vector3(0, Math.PI, 0);
+                
+                console.log("✅ Modelo de moto cargado correctamente");
+            } catch (error) {
+                console.warn("⚠️ No se pudo cargar el modelo de moto, usando fallback");
+                gameManager.crearMotoFallback(scene);
+            }
+
+            gameManager.uiManager.actualizarCarga(85, "Cargando modelo de bolsa...");
+
+            /* ========================================
+               SECCIÓN 4.8: CARGAR MODELO DE BOLSA
+               ======================================== */
+            
+            gameManager.paquete = new BABYLON.TransformNode("paquete", scene);
+            gameManager.paquete.setEnabled(false);
+
+            // Usar métodos del GameManager en lugar de funciones globales
+            gameManager.crearBolsaFallback(scene, matPaquete);
+            gameManager.crearBolsaRestauranteFallback(scene, matPaquete);
+
+            gameManager.uiManager.actualizarCarga(90, "Configurando controles...");
+
+            /* ========================================
+               SECCIÓN 4.9: CREAR FLECHA GUÍA
+               ======================================== */
+            
+            gameManager.flechaGuia = new BABYLON.TransformNode("flechaGuia", scene);
+            
+            const matFlecha = new BABYLON.StandardMaterial("matFlecha", scene);
+            matFlecha.diffuseColor = new BABYLON.Color3(0, 1, 0);
+            matFlecha.emissiveColor = new BABYLON.Color3(0, 0.5, 0);
+
+            const cuerpoFlecha = BABYLON.MeshBuilder.CreateBox("cuerpoFlecha", {
+                width: 0.3, height: 0.2, depth: 2
+            }, scene);
+            cuerpoFlecha.position = new BABYLON.Vector3(0, 0, 0.5);
+            cuerpoFlecha.material = matFlecha;
+            cuerpoFlecha.parent = gameManager.flechaGuia;
+
+            const puntaFlecha = BABYLON.MeshBuilder.CreateCylinder("puntaFlecha", {
+                diameterTop: 0, diameterBottom: 1, height: 1.2, tessellation: 3
+            }, scene);
+            puntaFlecha.position = new BABYLON.Vector3(0, 0.1, 2);
+            puntaFlecha.rotation.x = Math.PI / 2;
+            puntaFlecha.material = matFlecha;
+            puntaFlecha.parent = gameManager.flechaGuia;
+
+            gameManager.flechaGuia.position.y = 2.5;
+
+            /* ========================================
+               SECCIÓN 4.10: SISTEMA DE INPUT
+               ======================================== */
+            
+            scene.actionManager = new BABYLON.ActionManager(scene);
+            
+            scene.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    BABYLON.ActionManager.OnKeyDownTrigger,
+                    (evt) => { gameManager.inputMap[evt.sourceEvent.key.toLowerCase()] = true; }
+                )
+            );
+
+            scene.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    BABYLON.ActionManager.OnKeyUpTrigger,
+                    (evt) => { gameManager.inputMap[evt.sourceEvent.key.toLowerCase()] = false; }
+                )
+            );
+
+            /* ========================================
+               SECCIÓN 4.11: MECÁNICA DE RECOGER Y ENTREGAR
+               ======================================== */
+            
+            gameManager.deliveryManager.seleccionarNuevoRestaurante();
+
+            scene.onKeyboardObservable.add((kbInfo) => {
+                if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
+                    if (kbInfo.event.key === " " || kbInfo.event.code === "Space") {
+                        if (!gameManager.deliveryManager.intentarRecogerPedido()) {
+                            gameManager.deliveryManager.intentarEntregarPedido();
+                        }
+                    }
+                }
+            });
+
+            // Inicializar ParticleManager y AudioManager
+            gameManager.particleManager.initialize(scene);
+            gameManager.audioManager.initialize(scene);
+
+            gameManager.uiManager.actualizarCarga(95, "Iniciando juego...");
+
+            /* ========================================
+               SECCIÓN 4.12: GAME LOOP CON COLISIONES
+               ======================================== */
+            
+            scene.onBeforeRenderObservable.add(() => {
+                const deltaTime = engine.getDeltaTime() / 1000; // Convertir a segundos
+
+                // Actualizar todos los managers
+                gameManager.update(deltaTime);
+
+                // === ACTUALIZAR FLECHA GUÍA ===
+                gameManager.actualizarFlechaGuia();
+
+                // === ACTUALIZAR UI ===
+                gameManager.uiManager.actualizarVelocimetro();
+                gameManager.uiManager.actualizarDistancia();
+            });
+
+            gameManager.uiManager.actualizarCarga(100, "¡Listo!");
+            
+            setTimeout(() => {
+                document.getElementById("loadingScreen").style.display = "none";
+            }, 500);
+
+            return scene;
+        };
+
+        /* ========================================
+           SECCIÓN 9: INICIALIZACIÓN DEL JUEGO
+           ======================================== */
+        
+        createScene().then(scene => {
+            // Verificar que la cámara esté correctamente asignada
+            if (!scene.activeCamera) {
+                console.error("FATAL: No hay cámara activa en la escena");
+                return;
+            }
+            
+            console.log("🎮 Iniciando render loop con cámara:", scene.activeCamera.name);
+
+            engine.runRenderLoop(function() {
+                scene.render();
+            });
+
+            window.addEventListener("resize", function() {
+                engine.resize();
+            });
+
+            setTimeout(() => {
+                gameManager.uiManager.mostrarMensaje("🛵 ¡Bienvenido a Uber Eats Delivery!\nSigue la flecha verde para recoger");
+                gameManager.uiManager.actualizarUI();
+            }, 1000);
+        });
+        
+        console.log("=== UBER EATS DELIVERY - VERTICAL SLICE v5.0 ===");
+        console.log("🏗️  ARQUITECTURA:");
+        console.log("   ✓ GameManager: Singleton estricto");
+        console.log("   ✓ DeliveryManager: Observer Subject");
+        console.log("   ✓ UIManager: Observer suscrito a eventos de entrega");
+        console.log("🎥 CÁMARA DINÁMICA:");
+        console.log("   ✓ FollowCamera con seguimiento suave desde atrás");
+        console.log("   ✓ FOV aumenta linealmente con velocidad (urgencia visual)");
+        console.log("🏍️  FÍSICAS Y MANEJO:");
+        console.log("   ✓ Inercia refinada con deceleración progresiva");
+        console.log("   ✓ Maniobrabilidad disminuye a alta velocidad (Riesgo vs Recompensa)");
+        console.log("   ✓ Giros más amplios y difíciles a mayor velocidad");
+        console.log("✨ FEEDBACK VISUAL (JUICE):");
+        console.log("   ✓ Partículas verdes brillantes en dropoffs exitosos");
+        console.log("   ✓ Pitch del motor varía suavemente con velocidad");
+        console.log("📋 Controles: W/S = Acelerar/Frenar, A/D = Girar, ESPACIO = Recoger/Entregar");
+    </script>
+</body>
+</html>
